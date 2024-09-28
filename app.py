@@ -1,17 +1,9 @@
 import os
 import pandas as pd
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 
 # Initialiser l'application Flask
 app = Flask(__name__)
-
-# Spécifier le chemin du dossier à analyser (à définir en dur)
-folder_path = r'C:\tmp'
-
-# Vérifier si le dossier existe
-if not os.path.exists(folder_path):
-    print(f"Erreur : Le dossier '{folder_path}' n'existe pas.")
-    exit()
 
 # Fonction pour importer uniquement la colonne 'Info' d'un fichier CSV
 
@@ -61,17 +53,22 @@ def collect_info_from_folder(folder_path):
                     })
     return all_info_data
 
-
-# Collecter les données du dossier sélectionné
-collected_info = collect_info_from_folder(folder_path)
-
-# Définir une route pour afficher les données sur le localhost
+# Définir une route pour afficher les données en fonction du dossier fourni
 
 
-@app.route('/')
-def datas():
+@app.route('/analyze', methods=['GET'])
+def analyze():
+    folder_path = request.args.get('folder_path')
+
+    if not folder_path or not os.path.exists(folder_path):
+        return jsonify({"error": f"Le dossier '{folder_path}' n'existe pas ou n'a pas été spécifié."}), 400
+
+    # Collecter les données du dossier spécifié
+    collected_info = collect_info_from_folder(folder_path)
+
     if not collected_info:
         return jsonify({"message": "Aucune donnée trouvée dans le dossier sélectionné."})
+
     return jsonify({"collected_info": collected_info})
 
 
