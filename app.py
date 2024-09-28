@@ -1,18 +1,31 @@
 import os
 import pandas as pd
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify
+from tkinter import Tk, filedialog
+
+# Utiliser une boîte de dialogue pour sélectionner le dossier à analyser
+root = Tk()
+root.withdraw()  # Cacher la fenêtre principale
+folder_path = filedialog.askdirectory(title="Sélectionner le dossier à analyser")
+
+# Vérifier si un dossier a été sélectionné
+if not folder_path:
+    print("Aucun dossier sélectionné.")
+    exit()
+
+# Vérifier si le dossier existe
+if not os.path.exists(folder_path):
+    print(f"Erreur : Le dossier '{folder_path}' n'existe pas.")
+    exit()
 
 # Initialiser l'application Flask
 app = Flask(__name__)
 
 # Fonction pour importer uniquement la colonne 'Info' d'un fichier CSV
-
-
 def import_csv_info_column(file_path, delimiter='='):
     try:
         # Lire le fichier CSV
-        df = pd.read_csv(file_path, sep=delimiter, names=[
-                         "Lib", "Info"], encoding='latin-1')
+        df = pd.read_csv(file_path, sep=delimiter, names=["Lib", "Info"], encoding='latin-1')
 
         # Suppression des lignes vides et des informations non pertinentes
         df.dropna(subset=['Info'], inplace=True)
@@ -33,8 +46,6 @@ def import_csv_info_column(file_path, delimiter='='):
     return []
 
 # Fonction pour collecter les données de la colonne 'Info' de tous les fichiers du dossier sélectionné
-
-
 def collect_info_from_folder(folder_path):
     all_info_data = []
     for filename in os.listdir(folder_path):
@@ -53,24 +64,15 @@ def collect_info_from_folder(folder_path):
                     })
     return all_info_data
 
-# Définir une route pour afficher les données en fonction du dossier fourni
+# Collecter les données du dossier sélectionné
+collected_info = collect_info_from_folder(folder_path)
 
-
-@app.route('/analyze', methods=['GET'])
-def analyze():
-    folder_path = request.args.get('folder_path')
-
-    if not folder_path or not os.path.exists(folder_path):
-        return jsonify({"error": f"Le dossier '{folder_path}' n'existe pas ou n'a pas été spécifié."}), 400
-
-    # Collecter les données du dossier spécifié
-    collected_info = collect_info_from_folder(folder_path)
-
+# Définir une route pour afficher les données sur le localhost
+@app.route('/')
+def datas():
     if not collected_info:
         return jsonify({"message": "Aucune donnée trouvée dans le dossier sélectionné."})
-
     return jsonify({"collected_info": collected_info})
-
 
 # Lancer le serveur Flask
 if __name__ == '__main__':
