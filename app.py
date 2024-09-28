@@ -6,7 +6,7 @@ from flask import Flask, jsonify
 app = Flask(__name__)
 
 # Spécifier le chemin du dossier à analyser (à définir en dur)
-folder_path = r'C:\Users\Florian\Desktop\tEST Python\Don 383'
+folder_path = r'C:\tmp'
 
 # Vérifier si le dossier existe
 if not os.path.exists(folder_path):
