@@ -1,25 +1,12 @@
 import os
 import pandas as pd
-from flask import Flask, jsonify
-from tkinter import Tk, filedialog
-
-# Utiliser une boîte de dialogue pour sélectionner le dossier à analyser
-root = Tk()
-root.withdraw()  # Cacher la fenêtre principale
-folder_path = filedialog.askdirectory(title="Sélectionner le dossier à analyser")
-
-# Vérifier si un dossier a été sélectionné
-if not folder_path:
-    print("Aucun dossier sélectionné.")
-    exit()
-
-# Vérifier si le dossier existe
-if not os.path.exists(folder_path):
-    print(f"Erreur : Le dossier '{folder_path}' n'existe pas.")
-    exit()
+from flask import Flask, request, jsonify
 
 # Initialiser l'application Flask
 app = Flask(__name__)
+
+UPLOAD_FOLDER = './uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Fonction pour importer uniquement la colonne 'Info' d'un fichier CSV
 def import_csv_info_column(file_path, delimiter='='):
@@ -45,34 +32,26 @@ def import_csv_info_column(file_path, delimiter='='):
         print(f"Une erreur est survenue : {e}")
     return []
 
-# Fonction pour collecter les données de la colonne 'Info' de tous les fichiers du dossier sélectionné
-def collect_info_from_folder(folder_path):
-    all_info_data = []
-    for filename in os.listdir(folder_path):
-        if (filename.endswith(".don") or filename.endswith(".don99")) and "ECO" in filename:
-            file_path = os.path.join(folder_path, filename)
+# Route pour télécharger un fichier et analyser les données
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({"error": "Aucun fichier fourni"}), 400
 
-            # Vérifier si le fichier est bien un fichier (pas un sous-dossier)
-            if os.path.isfile(file_path):
-                # Importer les données du fichier CSV
-                info_data = import_csv_info_column(file_path)
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "Aucun fichier sélectionné"}), 400
 
-                if info_data:
-                    all_info_data.append({
-                        "filename": filename,
-                        "info": info_data
-                    })
-    return all_info_data
+    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(file_path)
 
-# Collecter les données du dossier sélectionné
-collected_info = collect_info_from_folder(folder_path)
+    # Analyser le fichier téléchargé
+    info_data = import_csv_info_column(file_path)
 
-# Définir une route pour afficher les données sur le localhost
-@app.route('/')
-def datas():
-    if not collected_info:
-        return jsonify({"message": "Aucune donnée trouvée dans le dossier sélectionné."})
-    return jsonify({"collected_info": collected_info})
+    if not info_data:
+        return jsonify({"message": "Aucune donnée trouvée"}), 400
+
+    return jsonify({"info": info_data})
 
 # Lancer le serveur Flask
 if __name__ == '__main__':
